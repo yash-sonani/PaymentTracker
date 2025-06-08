@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}Add Payment - Payment Management{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="mb-0"><i class="bi bi-plus-circle"></i> Add New Payment</h3>
+                </div>
+                <div class="card-body p-4">
+                    <form method="POST" id="paymentForm">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="payee" class="form-label">
+                                    <i class="bi bi-person"></i> Payee <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control" id="payee" name="payee" required 
+                                       placeholder="Enter payee name">
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="amount" class="form-label">
+                                    <i class="bi bi-currency-dollar"></i> Amount <span class="text-danger">*</span>
+                                </label>
+                                <input type="number" class="form-control" id="amount" name="amount" 
+                                       step="0.01" min="0" required placeholder="0.00">
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="date" class="form-label">
+                                    <i class="bi bi-calendar"></i> Date <span class="text-danger">*</span>
+                                </label>
+                                <input type="date" class="form-control" id="date" name="date" required>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="memo" class="form-label">
+                                    <i class="bi bi-sticky"></i> Memo
+                                </label>
+                                <input type="text" class="form-control" id="memo" name="memo" 
+                                       placeholder="Payment description">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="address" class="form-label">
+                                <i class="bi bi-geo-alt"></i> Address
+                            </label>
+                            <textarea class="form-control" id="address" name="address" rows="3" 
+                                      placeholder="Enter address"></textarea>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url_for('home') }}" class="btn btn-outline-secondary btn-lg me-md-2">
+                                <i class="bi bi-arrow-left"></i> Back to Home
+                            </a>
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-save"></i> Save Payment
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Set today's date as default
+    document.getElementById('date').valueAsDate = new Date();
+    
+    // Form validation
+    document.getElementById('paymentForm').addEventListener('submit', function(e) {
+        const payee = document.getElementById('payee').value.trim();
+        const amount = document.getElementById('amount').value;
+        const date = document.getElementById('date').value;
+        
+        if (!payee || !amount || !date) {
+            e.preventDefault();
+            alert('Please fill in all required fields (Payee, Amount, Date)');
+            return false;
+        }
+        
+        if (parseFloat(amount) <= 0) {
+            e.preventDefault();
+            alert('Amount must be greater than 0');
+            return false;
+        }
+    });
+</script>
+{% endblock %}

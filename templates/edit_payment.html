@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Payment - Payment Management{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="mb-0"><i class="bi bi-pencil-square"></i> Edit Payment #{{ payment.id }}</h3>
+                </div>
+                <div class="card-body p-4">
+                    <form method="POST" id="editPaymentForm">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="payee" class="form-label">
+                                    <i class="bi bi-person"></i> Payee <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control" id="payee" name="payee" 
+                                       value="{{ payment.payee }}" required placeholder="Enter payee name">
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="amount" class="form-label">
+                                    <i class="bi bi-currency-dollar"></i> Amount <span class="text-danger">*</span>
+                                </label>
+                                <input type="number" class="form-control" id="amount" name="amount" 
+                                       step="0.01" min="0" value="{{ payment.amount }}" required placeholder="0.00">
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="date" class="form-label">
+                                    <i class="bi bi-calendar"></i> Date <span class="text-danger">*</span>
+                                </label>
+                                <input type="date" class="form-control" id="date" name="date" 
+                                       value="{{ payment.date }}" required>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="memo" class="form-label">
+                                    <i class="bi bi-sticky"></i> Memo
+                                </label>
+                                <input type="text" class="form-control" id="memo" name="memo" 
+                                       value="{{ payment.memo or '' }}" placeholder="Payment description">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="address" class="form-label">
+                                <i class="bi bi-geo-alt"></i> Address
+                            </label>
+                            <textarea class="form-control" id="address" name="address" rows="3" 
+                                      placeholder="Enter address">{{ payment.address or '' }}</textarea>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url_for('view_payments') }}" class="btn btn-outline-secondary btn-lg me-md-2">
+                                <i class="bi bi-arrow-left"></i> Back to List
+                            </a>
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-save"></i> Update Payment
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Form validation
+    document.getElementById('editPaymentForm').addEventListener('submit', function(e) {
+        const payee = document.getElementById('payee').value.trim();
+        const amount = document.getElementById('amount').value;
+        const date = document.getElementById('date').value;
+        
+        if (!payee || !amount || !date) {
+            e.preventDefault();
+            alert('Please fill in all required fields (Payee, Amount, Date)');
+            return false;
+        }
+        
+        if (parseFloat(amount) <= 0) {
+            e.preventDefault();
+            alert('Amount must be greater than 0');
+            return false;
+        }
+    });
+    
+    // Highlight changed fields
+    const originalData = {
+        payee: '{{ payment.payee }}',
+        amount: '{{ payment.amount }}',
+        date: '{{ payment.date }}',
+        memo: '{{ payment.memo or "" }}',
+        address: '{{ payment.address or "" }}'
+    };
+    
+    function checkForChanges() {
+        const fields = ['payee', 'amount', 'date', 'memo', 'address'];
+        let hasChanges = false;
+        
+        fields.forEach(field => {
+            const element = document.getElementById(field);
+            const currentValue = element.value;
+            const originalValue = originalData[field];
+            
+            if (currentValue !== originalValue) {
+                element.classList.add('border-warning');
+                hasChanges = true;
+            } else {
+                element.classList.remove('border-warning');
+            }
+        });
+        
+        // Enable/disable submit button based on changes
+        const submitBtn = document.querySelector('button[type="submit"]');
+        if (hasChanges) {
+            submitBtn.classList.remove('btn-primary');
+            submitBtn.classList.add('btn-success');
+            submitBtn.innerHTML = '<i class="bi bi-save"></i> Save Changes';
+        } else {
+            submitBtn.classList.remove('btn-success');
+            submitBtn.classList.add('btn-primary');
+            submitBtn.innerHTML = '<i class="bi bi-save"></i> Update Payment';
+        }
+    }
+    
+    // Add event listeners to all form fields
+    ['payee', 'amount', 'date', 'memo', 'address'].forEach(field => {
+        document.getElementById(field).addEventListener('input', checkForChanges);
+        document.getElementById(field).addEventListener('change', checkForChanges);
+    });
+</script>
+{% endblock %}

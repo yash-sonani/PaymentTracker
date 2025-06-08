@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Payment Management{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <div class="container text-center">
+        <h1><i class="bi bi-wallet2"></i> Payment Management System</h1>
+        <p class="lead fs-4">Manage your payments efficiently and securely</p>
+    </div>
+</div>
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="row">
+                <div class="col-md-6 mb-4">
+                    <div class="card feature-card h-100" onclick="location.href='{{ url_for('add_payment') }}'">
+                        <div class="card-body text-center p-5">
+                            <div class="mb-4">
+                                <i class="bi bi-plus-circle-fill text-primary" style="font-size: 4rem;"></i>
+                            </div>
+                            <h3 class="card-title mb-3">Add New Payment</h3>
+                            <p class="card-text text-muted">
+                                Create new payment records with payee details, amount, date, memo, and address.
+                            </p>
+                            <a href="{{ url_for('add_payment') }}" class="btn btn-primary btn-lg">
+                                <i class="bi bi-plus-lg"></i> Add Payment
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6 mb-4">
+                    <div class="card feature-card h-100" onclick="location.href='{{ url_for('view_payments') }}'">
+                        <div class="card-body text-center p-5">
+                            <div class="mb-4">
+                                <i class="bi bi-table text-success" style="font-size: 4rem;"></i>
+                            </div>
+                            <h3 class="card-title mb-3">View Payments</h3>
+                            <p class="card-text text-muted">
+                                Browse, search, and edit your payment records with advanced filtering options.
+                            </p>
+                            <a href="{{ url_for('view_payments') }}" class="btn btn-success btn-lg">
+                                <i class="bi bi-eye"></i> View Records
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- <div class="row mt-5">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body text-center p-4">
+                            <h5 class="card-title">Features</h5>
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <i class="bi bi-shield-check text-primary fs-2"></i>
+                                    <h6 class="mt-2">Secure Storage</h6>
+                                    <small class="text-muted">Your data is stored securely in MySQL database</small>
+                                </div>
+                                <div class="col-md-3">
+                                    <i class="bi bi-search text-info fs-2"></i>
+                                    <h6 class="mt-2">Advanced Search</h6>
+                                    <small class="text-muted">Find records quickly with powerful search filters</small>
+                                </div>
+                                <div class="col-md-3">
+                                    <i class="bi bi-pencil-square text-warning fs-2"></i>
+                                    <h6 class="mt-2">Easy Editing</h6>
+                                    <small class="text-muted">Update payment records with simple click-to-edit</small>
+                                </div>
+                                <div class="col-md-3">
+                                    <i class="bi bi-phone text-success fs-2"></i>
+                                    <h6 class="mt-2">Responsive Design</h6>
+                                    <small class="text-muted">Works perfectly on desktop, tablet, and mobile</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div> -->
+        </div>
+    </div>
+</div>
+{% endblock %}
