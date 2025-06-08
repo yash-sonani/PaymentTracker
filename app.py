@@ -245,10 +245,13 @@ def download_payment(payment_id):
                 except Exception as e:
                     flash(f"Error generating PDF: {e}", "error")
                 flash("Payment record downloaded successfully!", "success")
+
+                file_name = f"payment_{payment_id}.pdf"
+
                 return send_file(
                     pdf_buffer,
                     as_attachment=True,
-                    download_name='sample_document.pdf',
+                    download_name=file_name,
                     mimetype='application/pdf'
                 )
                 
