@@ -8,11 +8,11 @@ import os
 from checkprinting import makepdf
 
 app = Flask(__name__)
-app.secret_key = "your-secret-key-here"  # Change this to a secure secret key
+app.secret_key = "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8"
 
 # Database configuration - Update these with your SiteGround MySQL details
 DB_CONFIG = {
-    "host": os.getenv("host"),  # e.g., 'mysql.yourdomain.com'
+    "host": os.getenv("host"),
     "database": os.getenv("database"),
     "user": os.getenv("user"),
     "password": os.getenv("password"),
