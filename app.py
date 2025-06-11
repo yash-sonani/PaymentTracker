@@ -25,6 +25,7 @@ def get_db_connection():
     try:
         # Ensure port is an integer
         config = DB_CONFIG.copy()
+        print(config)
         if "port" in config and not isinstance(config["port"], int):
             config["port"] = int(config["port"])
 
