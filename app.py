@@ -1,9 +1,11 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, session
 import mysql.connector
 from mysql.connector import Error
 import io
 from datetime import datetime
 import os
+import hashlib
+from functools import wraps
 
 from checkprinting import makepdf
 
@@ -36,13 +38,49 @@ def get_db_connection():
         return None
 
 
+def hash_password(password):
+    """Hash password using SHA-256"""
+    return hashlib.sha256(password.encode()).hexdigest()
+
+
+def verify_password(password, hashed):
+    """Verify password against hash"""
+    return hash_password(password) == hashed
+
+
+def login_required(f):
+    """Decorator to require login for protected routes"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            flash('Please log in to access this page.', 'error')
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+
 def init_db():
-    """Initialize database table"""
+    """Initialize database tables"""
     connection = get_db_connection()
     if connection:
         try:
             cursor = connection.cursor()
-            create_table_query = """
+            
+            # Create users table
+            create_users_table = """
+            CREATE TABLE IF NOT EXISTS users (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                username VARCHAR(50) UNIQUE NOT NULL,
+                email VARCHAR(100) UNIQUE NOT NULL,
+                password_hash VARCHAR(64) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            )
+            """
+            cursor.execute(create_users_table)
+            
+            # Create payments table
+            create_payments_table = """
             CREATE TABLE IF NOT EXISTS payments (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 payee VARCHAR(255) NOT NULL,
@@ -54,22 +92,77 @@ def init_db():
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
             )
             """
-            cursor.execute(create_table_query)
+            cursor.execute(create_payments_table)
+            
             connection.commit()
-            print("Table created successfully")
+            print("Tables created successfully")
         except Error as e:
-            print(f"Error creating table: {e}")
+            print(f"Error creating tables: {e}")
         finally:
             connection.close()
 
 
 @app.route("/")
+@login_required
 def home():
     """Home page with navigation options"""
-    return render_template("home.html")
+    if 'user_id' in session:
+        return render_template("home.html")
+    else:
+        return render_template("login.html")
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    """User login"""
+    if request.method == "POST":
+        username_or_email = request.form.get("username_or_email").strip()
+        password = request.form.get("password")
+
+        if not all([username_or_email, password]):
+            flash("Please fill in all fields", "error")
+            return redirect(url_for("login"))
+
+        connection = get_db_connection()
+        if connection:
+            try:
+                cursor = connection.cursor(dictionary=True)
+                
+                # Check if user exists (by username or email)
+                cursor.execute(
+                    "SELECT * FROM users WHERE username = %s OR email = %s", 
+                    (username_or_email, username_or_email)
+                )
+                user = cursor.fetchone()
+
+                if user and verify_password(password, user['password_hash']):
+                    # Login successful
+                    session['user_id'] = user['id']
+                    session['username'] = user['username']
+                    flash(f"Welcome back, {user['username']}!", "success")
+                    return render_template("home.html")
+                else:
+                    flash("Invalid username/email or password", "error")
+            except Error as e:
+                flash(f"Error during login: {e}", "error")
+            finally:
+                connection.close()
+        else:
+            flash("Database connection failed", "error")
+
+    return render_template("login.html")
+
+
+@app.route("/logout")
+def logout():
+    """User logout"""
+    session.clear()
+    flash("You have been logged out successfully", "success")
+    return render_template("login.html")
 
 
 @app.route("/add_payment", methods=["GET", "POST"])
+@login_required
 def add_payment():
     """Add new payment record"""
     if request.method == "POST":
@@ -110,8 +203,9 @@ def add_payment():
 
 
 @app.route("/view_payments")
+@login_required
 def view_payments():
-    """View all payment records with search functionality"""
+    """View all payment records for the current user"""
     connection = get_db_connection()
     payments = []
 
@@ -145,8 +239,9 @@ def view_payments():
 
 
 @app.route("/edit_payment/<int:payment_id>", methods=["GET", "POST"])
+@login_required
 def edit_payment(payment_id):
-    """Edit existing payment record"""
+    """Edit existing payment record (only if it belongs to the current user)"""
     connection = get_db_connection()
 
     if request.method == "POST":
@@ -159,6 +254,7 @@ def edit_payment(payment_id):
         if connection:
             try:
                 cursor = connection.cursor()
+                # Update only if the payment belongs to the current user
                 update_query = """
                 UPDATE payments 
                 SET payee = %s, amount = %s, date = %s, memo = %s, address = %s
@@ -168,9 +264,13 @@ def edit_payment(payment_id):
                     update_query,
                     (payee, float(amount), date, memo, address, payment_id),
                 )
-                connection.commit()
-                flash("Payment record updated successfully!", "success")
-                return redirect(url_for("view_payments"))
+                
+                if cursor.rowcount > 0:
+                    connection.commit()
+                    flash("Payment record updated successfully!", "success")
+                    return redirect(url_for("view_payments"))
+                else:
+                    flash("Payment record not found or you don't have permission to edit it", "error")
             except Error as e:
                 flash(f"Error updating record: {e}", "error")
             finally:
@@ -181,7 +281,10 @@ def edit_payment(payment_id):
     if connection:
         try:
             cursor = connection.cursor(dictionary=True)
-            cursor.execute("SELECT * FROM payments WHERE id = %s", (payment_id,))
+            cursor.execute(
+                "SELECT * FROM payments WHERE id = %s", 
+                (payment_id)
+            )
             payment = cursor.fetchone()
             if payment and payment["date"]:
                 payment["date"] = payment["date"].strftime("%Y-%m-%d")
@@ -191,23 +294,31 @@ def edit_payment(payment_id):
             connection.close()
 
     if not payment:
-        flash("Payment record not found", "error")
+        flash("Payment record not found or you don't have permission to edit it", "error")
         return redirect(url_for("view_payments"))
 
     return render_template("edit_payment.html", payment=payment)
 
 
 @app.route("/delete_payment/<int:payment_id>", methods=["POST"])
+@login_required
 def delete_payment(payment_id):
-    """Delete payment record"""
+    """Delete payment record (only if it belongs to the current user)"""
     connection = get_db_connection()
 
     if connection:
         try:
             cursor = connection.cursor()
-            cursor.execute("DELETE FROM payments WHERE id = %s", (payment_id,))
-            connection.commit()
-            flash("Payment record deleted successfully!", "success")
+            cursor.execute(
+                "DELETE FROM payments WHERE id = %s", 
+                (payment_id)
+            )
+            
+            if cursor.rowcount > 0:
+                connection.commit()
+                flash("Payment record deleted successfully!", "success")
+            else:
+                flash("Payment record not found or you don't have permission to delete it", "error")
         except Error as e:
             flash(f"Error deleting record: {e}", "error")
         finally:
@@ -219,14 +330,18 @@ def delete_payment(payment_id):
 
 
 @app.route("/download_payment/<int:payment_id>", methods=["POST"])
+@login_required
 def download_payment(payment_id):
-    """Download payment record as PDF"""
+    """Download payment record as PDF (only if it belongs to the current user)"""
     connection = get_db_connection()
 
     if connection:
         try:
             cursor = connection.cursor(dictionary=True)
-            cursor.execute("SELECT * FROM payments WHERE id = %s", (payment_id,))
+            cursor.execute(
+                "SELECT * FROM payments WHERE id = %s", 
+                (payment_id)
+            )
             payment = cursor.fetchone()
 
             if payment:
@@ -255,9 +370,8 @@ def download_payment(payment_id):
                     download_name=file_name,
                     mimetype='application/pdf'
                 )
-                
             else:
-                flash("Payment record not found", "error")
+                flash("Payment record not found or you don't have permission to download it", "error")
         except Error as e:
             flash(f"Error downloading record: {e}", "error")
         finally:
@@ -269,15 +383,18 @@ def download_payment(payment_id):
 
 
 @app.route("/api/payments")
+@login_required
 def api_payments():
-    """API endpoint for payment data (for DataTables)"""
+    """API endpoint for payment data (for DataTables) - only current user's data"""
     connection = get_db_connection()
     payments = []
 
     if connection:
         try:
             cursor = connection.cursor(dictionary=True)
-            cursor.execute("SELECT * FROM payments ORDER BY date DESC")
+            cursor.execute(
+                "SELECT * FROM payments ORDER BY date DESC"
+            )
             payments = cursor.fetchall()
 
             # Convert date objects to strings
@@ -291,6 +408,36 @@ def api_payments():
             connection.close()
 
     return jsonify({"data": payments})
+
+
+@app.route("/profile")
+@login_required
+def profile():
+    """User profile page"""
+    connection = get_db_connection()
+    user = None
+    
+    if connection:
+        try:
+            cursor = connection.cursor(dictionary=True)
+            cursor.execute("SELECT * FROM users WHERE id = %s", (session['user_id'],))
+            user = cursor.fetchone()
+            
+            if user:
+                # Remove password hash from user data
+                del user['password_hash']
+                
+                # Format timestamps
+                if user["created_at"]:
+                    user["created_at"] = user["created_at"].strftime("%Y-%m-%d %H:%M:%S")
+                if user["updated_at"]:
+                    user["updated_at"] = user["updated_at"].strftime("%Y-%m-%d %H:%M:%S")
+        except Error as e:
+            flash(f"Error fetching profile: {e}", "error")
+        finally:
+            connection.close()
+    
+    return render_template("profile.html", user=user)
 
 
 if __name__ == "__main__":

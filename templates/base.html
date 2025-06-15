@@ -78,7 +78,7 @@
         .hero-section {
             background: var(--primary-gradient);
             color: white;
-            padding: 60px 0;
+            padding: 30px 0;
             margin-bottom: 30px;
         }
         
@@ -124,6 +124,25 @@
                         <a class="nav-link" href="{{ url_for('view_payments') }}">View Payments</a>
                     </li>
                 </ul>
+
+                <ul class="navbar-nav">
+                    {% if session.user_id %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-user me-1"></i>{{ session.username }}
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{{ url_for('logout') }}">Logout</a></li>
+                            </ul>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('login') }}">Login</a>
+                        </li>
+                    {% endif %}
+                </ul>
+
+
             </div>
         </div>
     </nav>
