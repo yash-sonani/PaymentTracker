@@ -283,7 +283,7 @@ def edit_payment(payment_id):
             cursor = connection.cursor(dictionary=True)
             cursor.execute(
                 "SELECT * FROM payments WHERE id = %s", 
-                (payment_id)
+                (payment_id,)
             )
             payment = cursor.fetchone()
             if payment and payment["date"]:
@@ -311,7 +311,7 @@ def delete_payment(payment_id):
             cursor = connection.cursor()
             cursor.execute(
                 "DELETE FROM payments WHERE id = %s", 
-                (payment_id)
+                (payment_id,)
             )
             
             if cursor.rowcount > 0:
@@ -340,7 +340,7 @@ def download_payment(payment_id):
             cursor = connection.cursor(dictionary=True)
             cursor.execute(
                 "SELECT * FROM payments WHERE id = %s", 
-                (payment_id)
+                (payment_id,)
             )
             payment = cursor.fetchone()
 
